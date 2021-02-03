@@ -1,5 +1,7 @@
 ---
-title: "R Notebook"
+title: "Team Project 1 Group11"
+author: "Taylor Ann Applewhite, Olena Shumeiko, Yuri Takanabe, Nic Yabar"
+date: "02/03/2021"
 output:
   html_document:
     df_print: paged
@@ -79,13 +81,13 @@ The lowest cross-validation error occurs when only M = 1 partial least
 squares directions are used. We now evaluate the corresponding test set
 MSE.
 ```{r}
-pls.pred = predict(pls.fit, x[test,], ncomp = 1)
+pls.pred = predict(pls.fit, x[test,], ncomp = 2)
 mean((pls.pred-y.test)^2)
 ```
 The test MSE is comparable to, but slightly less than, the test MSE
 obtained using PCR.
 ```{r}
-pls.fit=plsr(Salary~., data=Hitters ,scale=TRUE ,ncomp =1)
+pls.fit=plsr(Salary~., data=Hitters ,scale=TRUE ,ncomp =2)
 summary(pls.fit)
 ```
 Finally, we perform PLS using the full data set, using M = 1, the number
@@ -176,3 +178,4 @@ final five-component model PCR fit, 39.95 %. This is because PCR only
 attempts to maximize the amount of variance explained in the predictors,
 while PLS searches for directions that explain variance in both the predictors
 and the response
+
