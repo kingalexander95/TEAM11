@@ -1,0 +1,178 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+rm(list = ls())
+library(ISLR)
+library(pls)
+set.seed(2)
+x = model.matrix(Salary~., Hitters)[,-1]
+y = Hitters$Salary
+y<-na.omit(y)
+train = sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+y.test=y[test]
+```
+This is the set up for the modeling. We want to get rid of the na values first, and then we will set up the testing and training data.
+
+```{r}
+pcr.fit = pcr(Salary ~., data = Hitters, scale=T, validation='CV')
+summary(pcr.fit)
+```
+validation="CV" causes pcr() to compute the ten-fold cross-validation error
+for each possible value of M, the number of principal components used. The
+resulting fit can be examined using summary().
+```{r}
+validationplot(pcr.fit, val.type = "MSEP")
+```
+
+plot the cross-validation scores using the validationplot() function. Using val.type="MSEP" will cause the cross-validation MSE to be plotted.
+We see that the smallest cross-validation error occurs when M = 18 components
+are used. This is barely fewer than M = 19, which amounts to
+simply performing least squares, because when all of the components are
+used in PCR no dimension reduction occurs.
+cross-validation error is roughly the same when only one
+component is included in the model. This suggests that a model that uses
+just a small number of components might suffice
+Briefly,
+we can think of this as the amount of information about the predictors or
+the response that is captured using M principal components. For example,
+setting M = 1 only captures 38.31% of all the variance, or information, in
+the predictors. In contrast, using M = 6 increases the value to 88.63%. If
+we were to use all M = p = 19 components, this would increase to 100%.
+```{r}
+set.seed(1)
+pcr.fit=pcr(Salary~., data=Hitters ,subset =train ,scale =TRUE ,
+            validation ="CV")
+validationplot(pcr.fit, val.type = "MSEP")
+```
+
+Now we find that the lowest cross-validation error occurs when M = 5
+component are used. We compute the test MSE as follows
+```{r}
+pcr.pred = predict(pcr.fit, x[test,],ncomp = 5)
+mean((pcr.pred -y.test)^2)
+```
+This test set MSE is competitive with the results obtained using ridge regression
+and the lasso. However, as a result of the way PCR is implemented,
+the final model is more difficult to interpret because it does not perform
+any kind of variable selection or even directly produce coefficient estimates
+```{r}
+pcr.fit=pcr(y~x,scale =TRUE ,ncomp =5)
+summary(pcr.fit)
+```
+Finally, we fit PCR on the full data set, using M = 5, the number of
+components identified by cross-validation
+
+```{r}
+set.seed(1)
+pls.fit = plsr(Salary~., data=Hitters, subset=train, scale=T, validation='CV')
+summary(pls.fit)
+validationplot(pls.fit , val.type="MSEP")
+```
+
+The lowest cross-validation error occurs when only M = 1 partial least
+squares directions are used. We now evaluate the corresponding test set
+MSE.
+```{r}
+pls.pred = predict(pls.fit, x[test,], ncomp = 1)
+mean((pls.pred-y.test)^2)
+```
+The test MSE is comparable to, but slightly less than, the test MSE
+obtained using PCR.
+```{r}
+pls.fit=plsr(Salary~., data=Hitters ,scale=TRUE ,ncomp =1)
+summary(pls.fit)
+```
+Finally, we perform PLS using the full data set, using M = 1, the number
+of components identified by cross-validation.
+Notice that the percentage of variance in Salary that the one-component
+PLS fit explains, 43.05%, is almost as much as that explained using the
+final five-component model PCR fit, 44.90 %. This is because PCR only
+attempts to maximize the amount of variance explained in the predictors,
+while PLS searches for directions that explain variance in both the predictors
+and the response
+
+
+```{r}
+rm(list=ls())
+library(caret)
+library(ISLR)
+data("Hitters")
+set.seed(2)
+sum(is.na(Hitters))
+Hitters<- na.omit(Hitters)
+```
+We are removing any NA's to clean up our data
+
+```{r}
+dividedata <- createDataPartition(Hitters$Salary, p=0.8, list = F)
+train <- Hitters[dividedata,]
+test <- Hitters[-dividedata,]
+```
+Here we are setting up our training and testing data using the createDataPartition command in the Caret package
+
+```{r}
+pcr.fit <- train(Salary~., method="pcr", data=train, scale=T, trControl = trainControl('cv', number=10), tuneLength=19)
+
+```
+An additional argument is scale = TRUE for standardizing the variables to make them comparable.
+
+Caret uses cross-validation to automatically identify the optimal number of principal components (ncomp) to be incorporated in the model.
+
+Here, we’ll test 20 different values of the tuning parameter ncomp. This is specified using the option tuneLength. The optimal number of principal components is selected so that the cross-validation error (RMSE) is minimized.
+
+```{r}
+summary(pcr.fit$finalModel)
+plot(pcr.fit)
+pcr.fit$bestTune
+```
+
+Here we are looking for the number of components that reduces our RMSE and it is 5.  The bestTune tells us that 5 principal components is the optimal amount.
+
+```{r}
+newpred <- predict(pcr.fit, newdata = test)
+data.frame(
+  MSE = (caret::RMSE(newpred, test$Salary)^2),
+  Rsquare = caret::R2(newpred, test$Salary)
+)
+```
+
+The MSE is higher than before when using the lab model
+
+We will now do the same process for the Partial Least Squares method
+```{r}
+set.seed(1)
+pls.fit <- train(Salary~., data=train, method='pls', scale=T, trControl = trainControl('cv', number = 10), tuneLength = 19)
+```
+
+We use the same notation as the pcr.fit model with the only change being "method = 'pls'" now
+
+
+```{r}
+summary(pls.fit$finalModel)
+plot(pls.fit)
+pls.fit$bestTune
+```
+
+Here we can see that the best amount of components in this case to reduce the MSE is 10
+This model explains 49% of the variance in salary using 10 components
+
+```{r}
+predictions <- predict(pls.fit, newdata = test)
+data.frame(
+  MSE = (caret::RMSE(predictions, test$Salary)^2),
+  Rsquare = caret::R2(predictions, test$Salary)
+)
+```
+The MSE in the PLS method is slightly lower than the PCR model using the Caret package.  
+Notice that the percentage of variance in Salary that the ten-component
+PLS fit explains, 48.98%, is more than what was explained using the
+final five-component model PCR fit, 39.95 %. This is because PCR only
+attempts to maximize the amount of variance explained in the predictors,
+while PLS searches for directions that explain variance in both the predictors
+and the response
