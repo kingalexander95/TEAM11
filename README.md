@@ -1,7 +1,8 @@
-This repo contains materials for BUAD5082 Machine Learning II Team Project 1.
+<p>BUAD5082 Machine Learning II 
+<br>Team Project 1
 <br>Professor: Dr.Rachel Chung
 
-TEAM 11:
+<p>TEAM 11:
 <br>Olena Shumeiko oshumeiko@emai.wm.edu
 <br>Yuri Takanabe ytakanabe@email.wm.edu
 <br>Nic Yabar nyabar@email.wm.edu
